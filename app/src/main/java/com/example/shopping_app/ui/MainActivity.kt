@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -65,12 +66,16 @@ class MainActivity : AppCompatActivity() {
             viewModel.startSearch()
         }
 
+        binding.searhEditText.addTextChangedListener { editText ->
+            viewModel.updateSearchQuery(editText.toString())
+        }
+
         binding.searchButton.setOnClickListener {
-            viewModel.backToBase()
+            viewModel.viewSearchResults()
         }
 
         binding.searhEditText.setOnEditorActionListener { _, actionId, _ ->
-            if(actionId == EditorInfo.IME_ACTION_SEARCH) {
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 binding.searchButton.performClick()
                 true
             } else {
@@ -78,13 +83,17 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-
+        binding.homeButton.setOnClickListener { viewModel.backHome() }
     }
 
     private fun setupObservers() {
 
-        viewModel.products.observe(this) { products ->
-            adapter.updateList(products)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.filteredProducts.collect { productsList ->
+                    adapter.updateList(productsList)
+                }
+            }
         }
 
         lifecycleScope.launch {
@@ -93,12 +102,37 @@ class MainActivity : AppCompatActivity() {
                     when (state) {
                         is MainActivityViewModel.UiState.BaseState -> showBaseState()
                         is MainActivityViewModel.UiState.InputNewItemState -> showInputNewItemState()
-                        is MainActivityViewModel.UiState.SearhItems -> showSearchItemsState()
+                        is MainActivityViewModel.UiState.InputingSearchQuery -> showInputingQueryState()
+                        is MainActivityViewModel.UiState.ShowSearchResults -> showResults()
+                        is MainActivityViewModel.UiState.EmptyResults -> showEmptyResult()
+                        is MainActivityViewModel.UiState.Loading -> showLoadingState()
+                        is MainActivityViewModel.UiState.Error -> showError()
                     }
                 }
             }
         }
 
+    }
+
+    private fun showError() {
+        binding.progressBar.visibility = View.GONE
+        binding.recyclerView.visibility = View.GONE
+        binding.centerText.visibility = View.VISIBLE
+        binding.centerText.text = "Ошибка загрузки"
+    }
+
+    private fun showLoadingState() {
+        binding.progressBar.visibility = View.VISIBLE
+        binding.recyclerView.visibility = View.GONE
+        binding.centerText.visibility = View.VISIBLE
+        binding.centerText.text = "Загружаем..."
+    }
+
+    private fun showEmptyResult() {
+        binding.progressBar.visibility = View.GONE
+        binding.recyclerView.visibility = View.GONE
+        binding.centerText.visibility = View.VISIBLE
+        binding.centerText.text = "Ничего не найдено"
     }
 
     private fun setupRecyclerView() {
@@ -108,6 +142,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showBaseState() {
+        binding.recyclerView.visibility = View.VISIBLE
         binding.linearInputLayout.visibility = View.GONE
         binding.linearSearchLayout.visibility = View.GONE
         hideKeyboard()
@@ -116,6 +151,11 @@ class MainActivity : AppCompatActivity() {
         binding.searhEditText.text.clear()
         binding.searhEditText.clearFocus()
         binding.recyclerView.smoothScrollToPosition(0)
+        binding.progressBar.visibility = View.GONE
+        binding.centerText.visibility = View.GONE
+        binding.floatingSearchButton.visibility = View.VISIBLE
+        binding.floatingAddButton.visibility = View.VISIBLE
+        binding.homeButton.visibility = View.GONE
     }
 
     private fun showInputNewItemState() {
@@ -125,13 +165,25 @@ class MainActivity : AppCompatActivity() {
             .show(WindowInsetsCompat.Type.ime())
     }
 
-    private fun showSearchItemsState() {
+    private fun showInputingQueryState() {
+        binding.progressBar.visibility = View.GONE
+        binding.recyclerView.visibility = View.GONE
+        binding.centerText.visibility = View.GONE
+        binding.recyclerView.visibility = View.VISIBLE
         binding.linearSearchLayout.visibility = View.VISIBLE
         binding.searhEditText.requestFocus()
+
         WindowCompat.getInsetsController(window, binding.searhEditText)
             .show(WindowInsetsCompat.Type.ime())
     }
 
+    private fun showResults() {
+        hideKeyboard()
+        binding.inputProduct.clearFocus()
+        binding.floatingSearchButton.visibility = View.INVISIBLE
+        binding.floatingAddButton.visibility = View.INVISIBLE
+        binding.homeButton.visibility = View.VISIBLE
+    }
 
     private fun hideKeyboard() {
         WindowCompat.getInsetsController(window, binding.buttonAdd)

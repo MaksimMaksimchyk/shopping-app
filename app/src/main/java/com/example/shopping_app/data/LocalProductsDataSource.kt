@@ -15,6 +15,10 @@ class LocalProductsDataSource {
         ProductModel(name = "Ягоды"),
         ProductModel(name = "Ежевика"),
         ProductModel(name = "Сосиски"),
+        ProductModel(name = "Мандарины"),
+        ProductModel(name = "Апельсины"),
+        ProductModel(name = "Шампанское"),
+        ProductModel(name = "Вино"),
     )
 
     fun getProducts(): List<ProductModel> = products.toList()

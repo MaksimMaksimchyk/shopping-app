@@ -5,4 +5,5 @@
     <string name="input_hint">Добавить…</string>
     <string name="search_hint">Найти…</string>
     <string name="search_button_text">Поиск</string>
+    <string name="Home_button_text">Назад</string>
 </resources>
