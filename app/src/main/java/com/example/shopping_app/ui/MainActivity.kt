@@ -16,6 +16,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.shopping_app.databinding.ActivityMainBinding
 import com.example.shopping_app.ui.adapter.ProductsAdapter
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.getValue
 
@@ -24,6 +25,7 @@ class MainActivity : AppCompatActivity() {
     private val viewModel: MainActivityViewModel by viewModels()
     private lateinit var adapter: ProductsAdapter
     private lateinit var binding: ActivityMainBinding
+    private var collectQueryResults: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,6 +49,7 @@ class MainActivity : AppCompatActivity() {
         binding.buttonAdd.setOnClickListener {
             val productName = binding.inputProduct.text.toString().trim()
             viewModel.addProduct(productName)
+            stopInput()
         }
 
         binding.inputProduct.setOnEditorActionListener { _, actionId, _ ->
@@ -59,11 +62,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.floatingAddButton.setOnClickListener {
-            viewModel.startInputNewItem()
+            startInput()
         }
 
         binding.floatingSearchButton.setOnClickListener {
-            viewModel.startSearch()
+            startSearch()
         }
 
         binding.searhEditText.addTextChangedListener { editText ->
@@ -71,7 +74,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.searchButton.setOnClickListener {
-            viewModel.viewSearchResults()
+            hideKeyboard()
         }
 
         binding.searhEditText.setOnEditorActionListener { _, actionId, _ ->
@@ -83,14 +86,17 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        binding.homeButton.setOnClickListener { viewModel.backHome() }
+        binding.backButton.setOnClickListener {
+            viewModel.backHome()
+        }
+
     }
 
     private fun setupObservers() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.filteredProducts.collect { productsList ->
+                viewModel.allProducts.collect { productsList ->
                     adapter.updateList(productsList)
                 }
             }
@@ -101,38 +107,15 @@ class MainActivity : AppCompatActivity() {
                 viewModel.uiState.collect { state ->
                     when (state) {
                         is MainActivityViewModel.UiState.BaseState -> showBaseState()
-                        is MainActivityViewModel.UiState.InputNewItemState -> showInputNewItemState()
-                        is MainActivityViewModel.UiState.InputingSearchQuery -> showInputingQueryState()
-                        is MainActivityViewModel.UiState.ShowSearchResults -> showResults()
-                        is MainActivityViewModel.UiState.EmptyResults -> showEmptyResult()
-                        is MainActivityViewModel.UiState.Loading -> showLoadingState()
+                        is MainActivityViewModel.UiState.EmptyResult -> showEmptyResult()
                         is MainActivityViewModel.UiState.Error -> showError()
+                        is MainActivityViewModel.UiState.Loading -> showLoading()
+                        is MainActivityViewModel.UiState.ShowResult -> showResults()
                     }
                 }
             }
         }
 
-    }
-
-    private fun showError() {
-        binding.progressBar.visibility = View.GONE
-        binding.recyclerView.visibility = View.GONE
-        binding.centerText.visibility = View.VISIBLE
-        binding.centerText.text = "Ошибка загрузки"
-    }
-
-    private fun showLoadingState() {
-        binding.progressBar.visibility = View.VISIBLE
-        binding.recyclerView.visibility = View.GONE
-        binding.centerText.visibility = View.VISIBLE
-        binding.centerText.text = "Загружаем..."
-    }
-
-    private fun showEmptyResult() {
-        binding.progressBar.visibility = View.GONE
-        binding.recyclerView.visibility = View.GONE
-        binding.centerText.visibility = View.VISIBLE
-        binding.centerText.text = "Ничего не найдено"
     }
 
     private fun setupRecyclerView() {
@@ -142,48 +125,88 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showBaseState() {
+        binding.backButton.visibility = View.GONE
+        adapter.updateList(viewModel.allProducts.value)
+        binding.floatingAddButton.visibility = View.VISIBLE
+        binding.floatingSearchButton.visibility = View.VISIBLE
         binding.recyclerView.visibility = View.VISIBLE
         binding.linearInputLayout.visibility = View.GONE
         binding.linearSearchLayout.visibility = View.GONE
         hideKeyboard()
-        binding.inputProduct.text.clear()
-        binding.inputProduct.clearFocus()
-        binding.searhEditText.text.clear()
-        binding.searhEditText.clearFocus()
-        binding.recyclerView.smoothScrollToPosition(0)
-        binding.progressBar.visibility = View.GONE
-        binding.centerText.visibility = View.GONE
-        binding.floatingSearchButton.visibility = View.VISIBLE
-        binding.floatingAddButton.visibility = View.VISIBLE
-        binding.homeButton.visibility = View.GONE
+        binding.searhEditText.setText("")
+        binding.centerText.visibility = View.INVISIBLE
     }
 
-    private fun showInputNewItemState() {
+    private fun showResults() {
+        binding.recyclerView.visibility = View.VISIBLE
+        binding.centerText.visibility = View.GONE
+        binding.progressBar.visibility = View.GONE
+        binding.floatingAddButton.visibility = View.INVISIBLE
+        binding.floatingSearchButton.visibility = View.INVISIBLE
+    }
+
+    private fun showEmptyResult() {
+        binding.recyclerView.visibility = View.INVISIBLE
+        binding.centerText.visibility = View.VISIBLE
+        binding.progressBar.visibility = View.GONE
+        binding.centerText.text = "Ничего не найдено"
+        binding.floatingAddButton.visibility = View.INVISIBLE
+        binding.floatingSearchButton.visibility = View.INVISIBLE
+    }
+
+    private fun showError() {
+        binding.recyclerView.visibility = View.INVISIBLE
+        binding.centerText.visibility = View.VISIBLE
+        binding.progressBar.visibility = View.GONE
+        binding.centerText.text = "Ошибка"
+        binding.floatingAddButton.visibility = View.INVISIBLE
+        binding.floatingSearchButton.visibility = View.INVISIBLE
+    }
+
+    private fun showLoading() {
+        binding.backButton.visibility = View.VISIBLE
+        binding.recyclerView.visibility = View.INVISIBLE
+        binding.centerText.visibility = View.VISIBLE
+        binding.progressBar.visibility = View.VISIBLE
+        binding.centerText.text = "Поиск..."
+    }
+
+    private fun startInput() {
+        adapter.updateList(viewModel.allProducts.value)
+        binding.linearSearchLayout.visibility = View.GONE
         binding.linearInputLayout.visibility = View.VISIBLE
         binding.inputProduct.requestFocus()
         WindowCompat.getInsetsController(window, binding.inputProduct)
             .show(WindowInsetsCompat.Type.ime())
     }
 
-    private fun showInputingQueryState() {
-        binding.progressBar.visibility = View.GONE
-        binding.recyclerView.visibility = View.GONE
-        binding.centerText.visibility = View.GONE
-        binding.recyclerView.visibility = View.VISIBLE
-        binding.linearSearchLayout.visibility = View.VISIBLE
-        binding.searhEditText.requestFocus()
+    private fun stopInput() {
+        binding.inputProduct.setText("")
+        binding.linearInputLayout.visibility = View.GONE
+        binding.inputProduct.clearFocus()
+        hideKeyboard()
+        binding.recyclerView.smoothScrollToPosition(0)
+    }
 
+    private fun startSearch() {
+        binding.linearSearchLayout.visibility = View.VISIBLE
+        binding.linearInputLayout.visibility = View.GONE
+        binding.searhEditText.requestFocus()
         WindowCompat.getInsetsController(window, binding.searhEditText)
             .show(WindowInsetsCompat.Type.ime())
+
+        //По нажатию на кнопку запускаем джобу на коллект результатов поиска
+        if (collectQueryResults == null) collectQueryResults = lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.filteredProducts.collect { productsList ->
+                    if (viewModel.uiState.value !is MainActivityViewModel.UiState.BaseState) adapter.updateList(
+                        productsList
+                    )
+                }
+            }
+        }
     }
 
-    private fun showResults() {
-        hideKeyboard()
-        binding.inputProduct.clearFocus()
-        binding.floatingSearchButton.visibility = View.INVISIBLE
-        binding.floatingAddButton.visibility = View.INVISIBLE
-        binding.homeButton.visibility = View.VISIBLE
-    }
 
     private fun hideKeyboard() {
         WindowCompat.getInsetsController(window, binding.buttonAdd)

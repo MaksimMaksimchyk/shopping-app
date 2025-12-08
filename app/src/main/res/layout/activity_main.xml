@@ -30,12 +30,13 @@
         <EditText
             android:id="@+id/searh_edit_text"
             android:layout_width="0dp"
+
             android:layout_height="wrap_content"
             android:layout_margin="8dp"
             android:layout_weight="1"
             android:hint="@string/search_hint"
             android:imeOptions="actionSearch"
-            android:inputType="text"
+            android:inputType="textCapSentences"
             android:textSize="16sp" />
 
         <Button
@@ -64,7 +65,7 @@
             android:layout_weight="1"
             android:hint="@string/input_hint"
             android:imeOptions="actionDone"
-            android:inputType="text"
+            android:inputType="textCapSentences"
             android:textSize="16sp" />
 
         <Button
@@ -111,17 +112,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:srcCompat="@android:drawable/ic_menu_search" />
 
-    <Button
-        android:id="@+id/home_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/Home_button_text"
-        android:visibility="invisible"
-        app:layout_constraintBottom_toBottomOf="@+id/floatingAddButton"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/floatingAddButton" />
-
     <TextView
         android:id="@+id/center_text"
         android:layout_width="wrap_content"
@@ -139,9 +129,20 @@
         style="?android:attr/progressBarStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:visibility="invisible"
         app:layout_constraintBottom_toTopOf="@id/center_text"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <Button
+        android:id="@+id/back_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Назад"
+        app:layout_constraintBottom_toBottomOf="@+id/floatingAddButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/floatingAddButton" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
