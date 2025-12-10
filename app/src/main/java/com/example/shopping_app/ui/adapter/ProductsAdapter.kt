@@ -7,10 +7,8 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.example.shopping_app.databinding.ItemProductBinding
 import com.example.shopping_app.domain.ProductModel
-import com.example.shopping_app.ui.MainActivityViewModel
-import com.example.shopping_app.ui.adapter.ProductsDiffUtilCallback
 
-class ProductsAdapter(private val onCheckedChange: (ProductModel) -> Unit) :
+class ProductsAdapter(private val onCheckedChange: (ProductModel, Boolean) -> Unit) :
     RecyclerView.Adapter<ProductsAdapter.ProductViewHolder>() {
     private var products = listOf<ProductModel>()
 
@@ -37,12 +35,14 @@ class ProductsAdapter(private val onCheckedChange: (ProductModel) -> Unit) :
         RecyclerView.ViewHolder(binding.root) {
 
         fun bind(product: ProductModel) {
+
             binding.productName.text = product.name
             binding.checkbox.isChecked = product.purchased
             updateStrikeThrough(product.purchased)
 
-            binding.checkbox.setOnCheckedChangeListener { _, isChecked ->
-                onCheckedChange(product)
+            binding.checkbox.setOnClickListener {
+                val isChecked = binding.checkbox.isChecked
+                onCheckedChange(product, isChecked)
                 updateStrikeThrough(product.purchased)
             }
         }
@@ -58,6 +58,7 @@ class ProductsAdapter(private val onCheckedChange: (ProductModel) -> Unit) :
             }
         }
 
+
     }
 
     fun updateList(newProducts: List<ProductModel>) {
@@ -65,6 +66,5 @@ class ProductsAdapter(private val onCheckedChange: (ProductModel) -> Unit) :
         products = newProducts
         diffResult.dispatchUpdatesTo(this)
     }
-
 
 }

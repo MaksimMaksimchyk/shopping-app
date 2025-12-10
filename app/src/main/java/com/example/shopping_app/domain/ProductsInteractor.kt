@@ -13,9 +13,9 @@ class ProductsInteractor(private val productsRepository: ProductsRepository) {
         productsRepository.deleteProduct(id)
     }
 
-    fun changePurchaseStatus(product: ProductModel) {
-        if (product.purchased == true) productsRepository.setPurchaseStatusToFalse(product.id)
-        else productsRepository.setPurchaseStatusToTrue(product.id)
+    fun changePurchaseStatus(product: ProductModel, isChecked: Boolean) {
+        if (isChecked == true) productsRepository.setPurchaseStatusToTrue(product.id)
+        else productsRepository.setPurchaseStatusToFalse(product.id)
     }
 
 }

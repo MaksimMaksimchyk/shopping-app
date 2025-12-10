@@ -18,6 +18,11 @@ class ProductsDiffUtilCallback(
     }
 
     override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-        return oldList[oldItemPosition] == newList[newItemPosition]
+        val oldProduct = oldList[oldItemPosition]
+        val newProduct = newList[newItemPosition]
+
+        return oldProduct.name == newProduct.name &&
+                oldProduct.purchased == newProduct.purchased &&
+                oldProduct.id == newProduct.id
     }
 }
