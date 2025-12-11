@@ -1,5 +1,6 @@
 package com.example.shopping_app.ui
 
+import android.app.Application
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -14,12 +15,17 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.shopping_app.data.FakeDataBase
 import com.example.shopping_app.databinding.ActivityMainBinding
 import com.example.shopping_app.ui.adapter.ProductsAdapter
+import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.launch
 import kotlin.getValue
 
+@HiltAndroidApp
+class ShoppingApp: Application()
+
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     private val viewModel: MainActivityViewModel by viewModels()

@@ -16,9 +16,11 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.shopping_app.databinding.ActivitySearchBinding
 import com.example.shopping_app.ui.adapter.ProductsAdapter
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import kotlin.getValue
 
+@AndroidEntryPoint
 class SearchActivity : AppCompatActivity() {
     private val viewModel: SearchActivityViewModel by viewModels()
     private lateinit var adapter: ProductsAdapter

@@ -1,10 +1,27 @@
 package com.example.shopping_app.data
 
 import com.example.shopping_app.domain.ProductModel
+import javax.inject.Singleton
 
+@Singleton
 class LocalProductsDataSource {
 
-    private val products = FakeDataBase.products
+    private val products =   mutableListOf<ProductModel>(
+        ProductModel(name = "Ананас"),
+        ProductModel(name = "Апельсин"),
+        ProductModel(name = "Анаконда"),
+        ProductModel(name = "Вода"),
+        ProductModel(name = "Водка"),
+        ProductModel(name = "Салфетки"),
+        ProductModel(name = "Салат"),
+        ProductModel(name = "Ягоды"),
+        ProductModel(name = "Ежевика"),
+        ProductModel(name = "Сосиски"),
+        ProductModel(name = "Мандарины"),
+        ProductModel(name = "Апельсины"),
+        ProductModel(name = "Шампанское"),
+        ProductModel(name = "Вино"),
+    )
 
     fun getProducts(): List<ProductModel> = products.toList()
 

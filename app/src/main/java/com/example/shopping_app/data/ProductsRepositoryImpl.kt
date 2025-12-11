@@ -2,8 +2,11 @@ package com.example.shopping_app.data
 
 import com.example.shopping_app.domain.ProductModel
 import com.example.shopping_app.domain.ProductsRepository
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class ProductsRepositoryImpl(private val localProductsDataSource: LocalProductsDataSource) :
+@Singleton
+class ProductsRepositoryImpl @Inject constructor(private val localProductsDataSource: LocalProductsDataSource) :
     ProductsRepository {
 
     override fun getProducts(): List<ProductModel> {
