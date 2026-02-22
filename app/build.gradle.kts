@@ -54,4 +54,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation("com.google.dagger:hilt-android:2.57.1")
     ksp("com.google.dagger:hilt-android-compiler:2.57.1")
+    implementation("io.reactivex.rxjava3:rxjava:3.1.12") // Core RxJava 3 library
+    implementation("io.reactivex.rxjava3:rxandroid:3.0.2") // Android-specific bindings
 }

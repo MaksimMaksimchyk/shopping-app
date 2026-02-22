@@ -6,7 +6,7 @@ import javax.inject.Singleton
 @Singleton
 class LocalProductsDataSource {
 
-    private val products =   mutableListOf<ProductModel>(
+    private val products = mutableListOf<ProductModel>(
         ProductModel(name = "Ананас"),
         ProductModel(name = "Апельсин"),
         ProductModel(name = "Анаконда"),

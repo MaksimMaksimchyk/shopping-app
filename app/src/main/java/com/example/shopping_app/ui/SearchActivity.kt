@@ -10,21 +10,19 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.addTextChangedListener
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.shopping_app.databinding.ActivitySearchBinding
 import com.example.shopping_app.ui.adapter.ProductsAdapter
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
-import kotlin.getValue
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.disposables.CompositeDisposable
 
 @AndroidEntryPoint
 class SearchActivity : AppCompatActivity() {
     private val viewModel: SearchActivityViewModel by viewModels()
     private lateinit var adapter: ProductsAdapter
     private lateinit var binding: ActivitySearchBinding
+    private val disposables = CompositeDisposable()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,9 +70,10 @@ class SearchActivity : AppCompatActivity() {
 
     private fun setupObservers() {
 
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state ->
+        disposables.add(
+            viewModel.uiState
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe { state ->
                     when (state) {
                         is SearchActivityViewModel.UiState.EmptyResult -> showEmptyResult()
                         is SearchActivityViewModel.UiState.Error -> showError()
@@ -82,17 +81,21 @@ class SearchActivity : AppCompatActivity() {
                         is SearchActivityViewModel.UiState.ShowResult -> showResults()
                     }
                 }
-            }
-        }
+        )
 
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.filteredProducts.collect { productsList ->
+        disposables.add(
+            viewModel.filteredProducts
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe { productsList ->
                     adapter.updateList(productsList)
                 }
-            }
-        }
+        )
 
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        disposables.clear()
     }
 
     private fun setupRecyclerView() {
