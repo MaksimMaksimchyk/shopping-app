@@ -1,26 +1,15 @@
 package com.example.shopping_app.ui
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.example.shopping_app.data.LocalProductsDataSource
-import com.example.shopping_app.data.ProductsRepositoryImpl
 import com.example.shopping_app.domain.ProductModel
 import com.example.shopping_app.domain.ProductsInteractor
-import com.example.shopping_app.domain.ProductsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.stateIn
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.schedulers.Schedulers
+import io.reactivex.rxjava3.subjects.BehaviorSubject
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.random.Random
 
@@ -28,70 +17,71 @@ import kotlin.random.Random
 public class SearchActivityViewModel @Inject constructor(
     val productsInteractor: ProductsInteractor
 ) : ViewModel() {
-    private val _allProducts = MutableStateFlow<List<ProductModel>>(emptyList())
-    val allProducts = _allProducts.asStateFlow()
-    private val _uiState = MutableStateFlow<UiState>(UiState.ShowResult())
-    val uiState = _uiState.asStateFlow()
-    val _searchQuery = MutableStateFlow("")
-    val searchQuery = _searchQuery.asStateFlow()
+    private val disposables = CompositeDisposable()
 
-    val filteredProducts: StateFlow<List<ProductModel>> = _searchQuery
-        .debounce(300L)
+    private val _allProducts = BehaviorSubject.createDefault<List<ProductModel>>(emptyList())
+    private val _uiState = BehaviorSubject.createDefault<UiState>(UiState.ShowResult())
+    private val _searchQuery = BehaviorSubject.createDefault("")
+
+    val allProducts: Observable<List<ProductModel>> = _allProducts.hide()
+    val uiState: Observable<UiState> = _uiState.hide()
+    val searchQuery: Observable<String> = _searchQuery.hide()
+
+    val filteredProducts: Observable<List<ProductModel>> = _searchQuery
+        .debounce(300, TimeUnit.MILLISECONDS)
         .distinctUntilChanged()
-        .flatMapLatest { query ->
-            fakeLoadFlow(query).catch { _ ->
-                _uiState.value = UiState.Error()
-            }
+        .switchMap { query ->
+            fakeLoadObservable(query)
+                .onErrorResumeNext {
+                    _uiState.onNext(UiState.Error())
+                    Observable.just(emptyList())
+                }
         }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000L),
-            initialValue = emptyList()
-        )
-
-//    private val productsInteractor: ProductsInteractor by lazy {
-//        val dataSource = LocalProductsDataSource()
-//        val repository = ProductsRepositoryImpl(dataSource)
-//        ProductsInteractor(repository)
-//    }
+        .subscribeOn(Schedulers.io())
+        .observeOn(AndroidSchedulers.mainThread())
 
     init {
         loadProducts()
-        Log.i("testSearch", productsInteractor.toString())
+        disposables.add(filteredProducts.subscribe())
     }
 
     fun loadProducts() {
-        _allProducts.value = productsInteractor.getProducts()
+        _allProducts.onNext(productsInteractor.getProducts())
     }
 
     fun updateSearchQuery(query: String) {
-        _searchQuery.value = query
+        _searchQuery.onNext(query)
     }
 
-    private fun fakeLoadFlow(query: String): Flow<List<ProductModel>> = flow {
-        if (!query.isBlank()) {
-            Log.i("testSearch", productsInteractor.toString())
-            _uiState.value = UiState.Loading()
-            delay(1000L)
-            if (Random.nextInt(0, 100) > 80) {
-                throw Exception()
-            }
-            val currentAllItems = _allProducts.value
-            val results = if (query.isBlank()) {
-                currentAllItems
-            } else {
-                currentAllItems.filter { item ->
-                    item.name.contains(query, ignoreCase = true)
-                }
-            }
-            emit(results)
-            if (results.isEmpty()) _uiState.value = UiState.EmptyResult() else _uiState.value =
-                UiState.ShowResult()
-        } else {
-            emit(_allProducts.value)
-            _uiState.value = UiState.ShowResult()
-            return@flow
+    private fun fakeLoadObservable(query: String): Observable<List<ProductModel>> {
+
+        if (query.isBlank()) {
+            _uiState.onNext(UiState.ShowResult())
+            return Observable.just(_allProducts.value ?: emptyList())
         }
+
+        return Observable.create<List<ProductModel>> { emitter ->
+            _uiState.onNext(UiState.Loading())
+
+            if (Random.nextInt(0, 100) > 80) {
+                if (!emitter.isDisposed) emitter.onError(Exception("Random Error"))
+                return@create
+            }
+
+            val currentAllItems = _allProducts.value ?: emptyList()
+            val results = currentAllItems.filter { it.name.contains(query, ignoreCase = true) }
+
+            if (!emitter.isDisposed) {
+                emitter.onNext(results)
+
+                if (results.isEmpty()) _uiState.onNext(UiState.EmptyResult())
+                else _uiState.onNext(UiState.ShowResult())
+
+                emitter.onComplete()
+            }
+        }
+            .delay(1000, TimeUnit.MILLISECONDS, Schedulers.io())
+            .subscribeOn(Schedulers.io())
     }
 
     fun changePurchaseStatus(product: ProductModel, isChecked: Boolean) {
@@ -99,10 +89,15 @@ public class SearchActivityViewModel @Inject constructor(
         loadProducts()
     }
 
+    override fun onCleared() {
+        super.onCleared()
+        disposables.clear()
+    }
+
     sealed interface UiState {
-        class Loading() : UiState
-        class Error() : UiState
-        class EmptyResult() : UiState
-        class ShowResult() : UiState
+        class Loading : UiState
+        class Error : UiState
+        class EmptyResult : UiState
+        class ShowResult : UiState
     }
 }
